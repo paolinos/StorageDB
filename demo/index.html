@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Demo StorageDB</title>
+	<style type="text/css">
+	.div{
+		padding: 5px;
+		border: 1px solid;
+	}
+
+
+	/*
+		Thanks Boostrap ( http://getbootstrap.com/ ) for the css colors.
+	*/
+	.colorLine1{
+		background-color: #5bc0de;
+	    /*border-color: #46b8da;*/
+	    color: #fff;
+	}
+	.colorLine2{
+		background-color: #428bca;
+	    /*border-color: #357ebd;*/
+	    color: #fff;
+	}
+	.colorWarning{
+		background-color: #d9534f;
+	    /*border-color: #d43f3a;*/
+	    color: #fff;
+	}
+	.colorResult{
+		background-color: #f0ad4e;
+	    /*border-color: #eea236;*/
+	    color: #fff;
+	}
+	</style>
+</head>
+<body>
+
+	<div class="div colorLine1">
+		<label>Init / Delete and Restore DB</label><input type="button" id="btnResetDB" value="ResetDB">
+	</div>
+
+	<div class="div colorLine2">
+		<input type="text" id="txtUsername" value="" placeholder="Username">
+		<input type="button" id="btnAddUser" value="Add User">
+	</div>
+	<div class="div colorLine1">
+		<input type="text" id="txtUserId" value="" placeholder="Id">
+		<input type="button" id="btnRemoveById" value="Remove by Id">
+	</div>
+	<div class="div colorLine2">
+		<input type="button" id="btnGetAll" value="Get all Users">
+	</div>
+
+	<div class="div colorLine1">
+		<input type="text" id="txtSearch" value="" placeholder="Search object">
+		<input type="button" id="btnSearch" value="Search">
+		<br>
+		<label>
+			This search it's an object. like:
+				search by id: {id:5}
+				search by name : {name:"Peter"}
+				search by name and position : {name:"Peter",position:3}
+		</label>
+	</div>
+
+	<div id="divMsg" class="div colorWarning">
+	</div>
+
+	<div id="divUsers" class="div colorResult">
+	</div>
+
+
+	<script src="../lib/StorageDB.js"></script>
+	<script type="text/javascript">
+		window.onload = function(){
+			/**
+				Search by ID
+			*/
+			function $(id){
+				return document.getElementById(id);
+			}
+
+
+			//----------------------------------------------------------------------------
+			//																Vars
+
+			const dbName = 'dbNameDemo';
+			const userDB = 'users';
+			var db = new StorageDB(dbName, [userDB]);
+			
+			//	Init Data
+			var dataInitDB = [
+								{id:1,name:"Robert",position:1,date:new Date()},
+								{id:2,name:"Michael",position:2,date:new Date()},
+								{id:3,name:"James",position:3,date:new Date()},
+								{id:4,name:"Richard",position:4,date:new Date()},
+								{id:5,name:"Valentino",position:1,date:new Date()},
+								{id:6,name:"Ralph",position:2,date:new Date()},
+								{id:7,name:"Peter",position:3,date:new Date()},
+								{id:8,name:"Ramon",position:4,date:new Date()}
+							];
+
+			$btnResetDB = $('btnResetDB');
+			
+			$txtUsername = $('txtUsername');
+			$btnAddUser = $('btnAddUser');
+
+			$txtUserId = $('txtUserId');
+			$btnRemoveById = $('btnRemoveById');
+
+			$btnGetAll = $('btnGetAll');
+
+			$divMsg = $('divMsg');
+
+			$divUsers = $('divUsers');
+
+
+			$txtSearch = $('txtSearch');
+			$btnSearch = $('btnSearch');
+			//----------------------------------------------------------------------------
+
+			/**
+				Enable or Disable Buttons
+			*/
+			var enableUI = function(val){
+				if(!val){
+					showMsg("");
+				}
+
+				$btnResetDB.disabled = !val;
+				$btnAddUser.disabled = !val;
+				$btnRemoveById.disabled = !val;
+				$btnGetAll.disabled = !val;
+				$btnSearch.disabled = !val;
+			}
+
+			/**
+				Show Message
+			*/
+			var showMsg = function(val){
+				$divMsg.innerHTML = val;
+			}
+
+			/**
+				Render List
+				
+			*/
+			var renderList = function(list){
+				var strList = "";
+				for (var i = 0; i < list.length; i++) {
+					var tmpObj = list[i];
+					strList += "id: " + tmpObj.id + " - name: " + tmpObj.name + " - position: " + tmpObj.position + " - date: " + tmpObj.date + "<br>";
+				};
+
+				$divUsers.innerHTML = strList;
+			}
+
+
+			//----------------------------------------------------------------------------
+			//																Buttons Click
+
+			$btnResetDB.onclick = function(){
+				enableUI(false);
+				//	Destroy Database
+				showMsg("Restoring DB....");
+				db.destroy(function(val){
+
+					if(val){
+						db = new StorageDB(dbName, [userDB]);
+						var error = false;
+						for (var i = dataInitDB.length - 1; i >= 0; i--)
+						{
+							db.addTo(	userDB,
+										dataInitDB[i],
+										function(result, dataResult){
+											if(!result){
+												error = true;
+											}
+										});
+						};
+
+						if(error){
+							showMsg("There is an error trying to Restore the DB");
+						}else{
+							showMsg("DB Restored");
+						}
+					}
+					else{
+						showMsg("DB can't be restored");
+					}
+					enableUI(true);
+				});
+			}
+
+			$btnAddUser.onclick = function(){
+				if($txtUsername.value.length > 0){
+					enableUI(false);
+					db.addTo(	userDB,
+								{name:$txtUsername.value,position: parseInt(Math.random() * 10), date:new Date()},
+								function(result, dataResult){
+									if(result){
+										showMsg("User Added. id: " + dataResult);
+									}else{
+										showMsg("There is an error trying to Add a User");
+									}
+									enableUI(true);
+								});
+
+				}else{
+					showMsg("The 'Username' field is required.");
+				}
+			}
+
+			$btnRemoveById.onclick = function(){
+				if($txtUserId.value.length > 0){
+					enableUI(false);
+					db.remove(	userDB,
+								{id:parseInt($txtUserId.value)},
+								function(result){
+									if(result){
+										showMsg("User removed");
+									}else{
+										showMsg("Error trying to remove User. The Id not exist.");
+									}
+									enableUI(true);
+								});
+
+				}else{
+					showMsg("The 'Id' field is required.");
+				}	
+			}
+
+			$btnGetAll.onclick = function(){
+				enableUI(false);
+				db.getAll(userDB, function(result, dataResult){
+					renderList(dataResult);
+					enableUI(true);
+				});
+			}
+
+			$btnSearch.onclick = function(){
+				if($txtSearch.value.length > 0){
+					enableUI(false);
+					showMsg("Searching by:" + $txtSearch.value);
+
+					try{
+						var obj=eval("("+$txtSearch.value+")");
+
+						db.get(
+								userDB,
+								obj,
+								function(dataResult){
+									renderList(dataResult);
+									enableUI(true);
+								}
+							);
+					}catch(e){
+						showMsg("The search parameters is not an object. Please see the example down of the field.");
+					}
+				}else{
+					showMsg("Add the data to search");
+				}
+			}
+			//----------------------------------------------------------------------------
+		}
+	</script>
+</body>
+</html>
